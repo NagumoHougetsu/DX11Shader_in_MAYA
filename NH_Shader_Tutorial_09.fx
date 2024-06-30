@@ -211,7 +211,7 @@ struct VS_TO_PS{
     float4 HPos     :   SV_Position;
     float4 Normal   :   NORMAL;
     float2 UV       :   TEXCOORD0;
-    float4 View     :   TEXCOORD1;
+    float3 View     :   TEXCOORD1;
 };
 
 VS_TO_PS VS(VS_INPUT In){
@@ -219,7 +219,7 @@ VS_TO_PS VS(VS_INPUT In){
     Out.HPos = mul(In.Position, gWVP);
     Out.Normal = mul(In.Normal, gWIT);
     Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
-    Out.View = float4(normalize(gVI[3].xyz - mul(In.Position, gW).xyz), 1.0);
+    Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     return Out;
 }
 
@@ -239,12 +239,11 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
             worldNormal.xyz *= outlineMask;
         }
         worldPosition.xyz += worldNormal.xyz;
-        
     }    
     Out.HPos = mul(worldPosition, gVP);
     Out.Normal = mul(In.Normal, gWIT);
     Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
-    Out.View = float4(normalize(gVI[3].xyz - mul(In.Position, gW).xyz), 1.0);
+    Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     return Out;
 }
 
@@ -270,6 +269,16 @@ float3 CulcShade(VS_TO_PS In){
         shadowColor = gShadowColor;
     }
     OutColor = lerp(shadowColor, baseColor, N);
+    return OutColor;
+}
+
+
+float4 PS(VS_TO_PS In) : SV_Target{
+    float3 color = CulcShade(In);
+    float gamma = 1.0;
+    if(gUseGamma == true){
+        gamma = 2.2;
+    }
     float3 rimColor;
     if(gUseRim == true){
         if(gUseRimColorTexture == true){
@@ -277,20 +286,15 @@ float3 CulcShade(VS_TO_PS In){
         }else if(gUseRimColorTexture == false){
             rimColor = gRimColor;
         }
-        float vdn = clamp(0.0, 1.0, dot(-In.View, In.Normal) + 1.0);
-        float F = smoothstep(gRimArea - gRimFeather, gRimArea + gRimFeather, vdn);
+        float vdn = clamp(0.0, 1.0, dot(In.View, In.Normal.xyz) + 1.0);
+        vdn = smoothstep(gRimArea - gRimFeather, gRimArea + gRimFeather, vdn);
         if(gUseRimColorTexture == true){
             rimColor = pow(gRimColorTexture.Sample(gWrapSampler, In.UV).xyz, gamma);
         }else if(gUseRimColorTexture == false){
             rimColor = gRimColor;
         }
-        OutColor += lerp(OutColor, OutColor + rimColor, F * gRimLevel);
+        color += lerp(color, color + rimColor, vdn * gRimLevel);
     }
-    return OutColor;
-}
-
-float4 PS(VS_TO_PS In) : SV_Target{
-    float3 color = CulcShade(In);
     return float4(color, 1.0);
 }
 
