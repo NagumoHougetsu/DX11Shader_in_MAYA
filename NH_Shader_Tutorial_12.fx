@@ -9,6 +9,21 @@ float3 gLight0Dir   :   DIRECTION <
     int UIOrder = 0;
 >;
 
+float3 gLight0Pos   :   POSITION <
+    string Object = "Light 0";
+    int UIOrder = 1;
+>;
+
+Texture2D gLight0ShadowMap  :   ShadowMap <
+    string Object = "Light 0";
+    int UIOrder = 2;
+>;
+
+float4x4 gMatLight  :   shadowMapMatrix <
+    string Object = "Light 0";
+    int UIOrder = 3;
+>;
+
 uniform bool gUseBaseColorTexture <
     string UIGroup = "Shading";
     int UIOrder = 100;
@@ -267,6 +282,12 @@ uniform SamplerState gWrapSampler{
     AddressV = WRAP;
 };
 
+uniform SamplerComparisonState gComp{
+    Filter = COMPARISON_MIN_MAG_MIP_LINEAR;
+    ComparisonFunc = GREATER;
+    MaxAnisotropy = 1;
+};
+
 struct VS_INPUT{
     float4 Position :   POSITION;
     float4 Normal   :   NORMAL;
@@ -281,6 +302,7 @@ struct VS_TO_PS{
     float3 Binormal :   BINORMAL;
     float2 UV       :   TEXCOORD0;
     float3 View     :   TEXCOORD1;
+    float4 posInLVP :   TEXCOORD2;
 };
 
 VS_TO_PS VS(VS_INPUT In){
@@ -292,6 +314,8 @@ VS_TO_PS VS(VS_INPUT In){
     Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0), gWIT));
     Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
     Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
+    Out.posInLVP = mul(In.Position, gMatLight);
+    Out.posInLVP.z = distance(mul(In.Position, gW), gLight0Pos)/1000;
     return Out;
 }
 
@@ -364,6 +388,7 @@ float3 CulcShade(float4 Normal, float4 Tangent, float3 Binormal, float2 UV, bool
 
 float4 PS(VS_TO_PS In) : SV_Target{
     float3 color = CulcShade(In.Normal, In.Tangent, In.Binormal, In.UV, true);
+    //float zInLVP = In.posInLVP.z ;/// In.HPos.w;
     float gamma = 1.0;
     if(gUseGamma == true){
         gamma = 2.2;
@@ -405,7 +430,8 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }
         color = lerp(color, rimColor, vdn * gRimLevel);
     }
-    return float4(color, 1.0);
+    //return float4(color, 1.0);
+    return float4(In.posInLVP.z, In.posInLVP.z, In.posInLVP.z, 1.0);
 }
 
 float4 PS_OUTLINE(VS_TO_PS In) : SV_Target{
