@@ -233,6 +233,20 @@ uniform float gLightDirMaskDegree <
     float UIMax = 1.0;
 > = 0.0;
 
+uniform bool gUseNormalMap <
+    string UIGroup = "NormalMap";
+    int UIOrder = 400;
+    string UIName = "Use NormalMap";
+> = false;
+
+uniform Texture2D gNormalMap <
+    string UIGroup = "NormalMap";
+    int UIOrder = 401;
+    string UIName = "NormalMap";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
+
 uniform bool gUseGamma <
     string UIGroup = "Color Space";
     int UIOrder = 400;
@@ -248,51 +262,26 @@ uniform SamplerState gWrapSampler{
 struct VS_INPUT{
     float4 Position :   POSITION;
     float4 Normal   :   NORMAL;
-    float2 UV       :   TEXCOORD0;
-};
-
-struct VS_INPUT_OUTLINE{
-    float4 Position :   POSITION;
-    float4 Normal   :   NORMAL;
+    float4 Tangent  :   TANGENT;
     float2 UV       :   TEXCOORD0;
 };
 
 struct VS_TO_PS{
     float4 HPos     :   SV_Position;
     float4 Normal   :   NORMAL;
+    float4 Tangent  :   TANGENT;
+    float3 Binormal :   BINORMAL;
     float2 UV       :   TEXCOORD0;
     float3 View     :   TEXCOORD1;
 };
-
-float3 CulcShade(VS_TO_PS In){
-    float3 OutColor;
-    float3 lightDir = normalize(gLight0Dir);
-    float3 baseColor;
-    float3 shadowColor;
-    float gamma = 1.0;
-    if(gUseGamma == true){
-        gamma = 2.2;
-    }
-    float N = dot(In.Normal.xyz, -lightDir);
-    N = smoothstep(gToonThreshold - gToonFeather, gToonThreshold + gToonFeather, N);
-    if(gUseBaseColorTexture == true){
-        baseColor = pow(gBaseColorTexture.Sample(gWrapSampler, In.UV).xyz, gamma);
-    }else{
-        baseColor = gBaseColor;
-    }
-    if(gUseShadowColorTexture == true){
-        shadowColor = pow(gShadowColorTexture.Sample(gWrapSampler, In.UV).xyz, gamma);
-    }else{
-        shadowColor = gShadowColor;
-    } 
-    OutColor = lerp(shadowColor, baseColor, N);
-    return OutColor;
-}
 
 VS_TO_PS VS(VS_INPUT In){
     VS_TO_PS Out;
     Out.HPos = mul(In.Position, gWVP);
     Out.Normal = mul(In.Normal, gWIT);
+    Out.Tangent = normalize(mul(In.Tangent, gWIT));
+    Out.Binormal = cross(In.Normal, In.Tangent).xyz * In.Tangent.w;
+    Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0), gWIT));
     Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
     Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     return Out;
@@ -325,16 +314,58 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
     }    
     Out.HPos = mul(worldPosition, gVP);
     Out.Normal = mul(In.Normal, gWIT);
+    Out.Tangent = normalize(mul(In.Tangent, gWIT));
+    Out.Binormal = cross(In.Normal, In.Tangent).xyz * In.Tangent.w;
+    Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0), gWIT));
     Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
-    Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     return Out;
 }
 
-float4 PS(VS_TO_PS In) : SV_Target{
-    float3 color = CulcShade(In);
+float3 CulcShade(float4 Normal, float4 Tangent, float2 UV, bool mode){
+    float3 OutColor;
+    float3 lightDir = normalize(gLight0Dir);
+    float3 baseColor;
+    float3 shadowColor;
     float gamma = 1.0;
     if(gUseGamma == true){
         gamma = 2.2;
+    }
+    float3 normal;
+    if(mode = true && gUseNormalMap == true){
+        normal = gNormalMap.Sample(gWrapSampler, UV).xyz * 2.0 - 1.0;
+        float3 worldNormal;
+        worldNormal.x = dot(Tangent.x, normal);
+    }else{
+        normal = Normal.xyz;
+    }
+    float N = dot(normal, -lightDir);
+    N = smoothstep(gToonThreshold - gToonFeather, gToonThreshold + gToonFeather, N);
+    if(gUseBaseColorTexture == true){
+        baseColor = pow(gBaseColorTexture.Sample(gWrapSampler, UV).xyz, gamma);
+    }else{
+        baseColor = gBaseColor;
+    }
+    if(gUseShadowColorTexture == true){
+        shadowColor = pow(gShadowColorTexture.Sample(gWrapSampler, UV).xyz, gamma);
+    }else{
+        shadowColor = gShadowColor;
+    } 
+    OutColor = lerp(shadowColor, baseColor, N);
+    return OutColor;
+}
+
+float4 PS(VS_TO_PS In) : SV_Target{
+    float3 color = CulcShade(In.Normal, In.Tangent, In.UV, true);
+    float gamma = 1.0;
+    if(gUseGamma == true){
+        gamma = 2.2;
+    }
+    float3 normal;
+    if(gUseNormalMap == true){
+        normal = gNormalMap.Sample(gWrapSampler, In.UV).xyz * 2.0 - 1.0;
+        normal =  (In.Tangent.xyz * normal.x) + (In.Binormal.xyz * normal.y) + (In.Normal.xyz + normal.z);
+    }else{
+        normal = In.Normal.xyz;
     }
     float3 rimColor;
     if(gUseRim == true){
@@ -343,7 +374,7 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }else if(gUseRimColorTexture == false){
             rimColor = gRimColor;
         }
-        float vdn = clamp(0.0, 1.0, dot(In.View, In.Normal.xyz) + 1.0);
+        float vdn = clamp(0.0, 1.0, dot(In.View, normal.xyz) + 1.0);
         float rimArea = 1.0 - gRimArea;
         vdn = smoothstep(rimArea - gRimFeather, rimArea + gRimFeather, vdn);
         if(gUseRimColorTexture == true){
@@ -360,7 +391,7 @@ float4 PS(VS_TO_PS In) : SV_Target{
             rimColor = color / (1.0 - rimColor);
         }
         if(gLightDirMask == true){
-            float LN =  max(gLightDirMaskDegree, dot(In.Normal, gLight0Dir));
+            float LN =  max(gLightDirMaskDegree, dot(normal, gLight0Dir));
             vdn *= LN;
         }
         color = lerp(color, rimColor, vdn * gRimLevel);
@@ -375,7 +406,7 @@ float4 PS_OUTLINE(VS_TO_PS In) : SV_Target{
         gamma = 2.2;
     }
     if(gUseColorTresses == true){
-        float3 tressColor = CulcShade(In);
+        float3 tressColor = CulcShade(In.Normal, In.Tangent, In.UV, false);
         color = tressColor * gOutlineColor;
     }else{
         if(gUseOutlineColorTexture == true){
