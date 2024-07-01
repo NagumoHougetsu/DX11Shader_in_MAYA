@@ -282,7 +282,7 @@ uniform SamplerState gWrapSampler{
     AddressV = WRAP;
 };
 
-uniform SamplerComparisonState gComp{
+uniform SamplerComparisonState gCompSampler{
     Filter = COMPARISON_MIN_MAG_MIP_LINEAR;
     ComparisonFunc = GREATER;
     MaxAnisotropy = 1;
@@ -315,7 +315,7 @@ VS_TO_PS VS(VS_INPUT In){
     Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
     Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     Out.posInLVP = mul(In.Position, gMatLight);
-    Out.posInLVP.z = distance(mul(In.Position, gW), gLight0Pos)/1000;
+    //Out.posInLVP.z = distance(mul(In.Position, gW), gLight0Pos)/1000;
     return Out;
 }
 
@@ -353,7 +353,7 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
     return Out;
 }
 
-float3 CulcShade(float4 Normal, float4 Tangent, float3 Binormal, float2 UV, bool mode){
+float3 CulcShade(float4 Normal, float4 Tangent, float3 Binormal, float4 posInLVP, float2 UV, bool mode){
     float3 OutColor;
     float3 lightDir = normalize(gLight0Dir);
     float3 baseColor;
@@ -382,13 +382,25 @@ float3 CulcShade(float4 Normal, float4 Tangent, float3 Binormal, float2 UV, bool
     }else{
         shadowColor = gShadowColor;
     } 
+    if(mode == true){
+        float2 shadowMapUV = posInLVP.xy / posInLVP.w;
+        shadowMapUV *= float2(0.5, -0.5);
+        shadowMapUV += 0.5;
+        float zInLVP = posInLVP.z / posInLVP.w;
+        if(shadowMapUV.x > 0.0 && shadowMapUV.x < 1.0 && shadowMapUV.y > 0.0 && shadowMapUV.y < 1.0){
+            float zInShadowMap = gLight0ShadowMap.Sample(gWrapSampler, shadowMapUV).r;
+            if(zInLVP > zInShadowMap){
+                N *= 0.5;
+            }
+        }
+    }
     OutColor = lerp(shadowColor, baseColor, N);
     return OutColor;
+    //return float4(N, N, N, 1.0);
 }
 
 float4 PS(VS_TO_PS In) : SV_Target{
-    float3 color = CulcShade(In.Normal, In.Tangent, In.Binormal, In.UV, true);
-    //float zInLVP = In.posInLVP.z ;/// In.HPos.w;
+    float3 color = CulcShade(In.Normal, In.Tangent, In.Binormal, In.posInLVP, In.UV, true);
     float gamma = 1.0;
     if(gUseGamma == true){
         gamma = 2.2;
@@ -430,8 +442,7 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }
         color = lerp(color, rimColor, vdn * gRimLevel);
     }
-    //return float4(color, 1.0);
-    return float4(In.posInLVP.z, In.posInLVP.z, In.posInLVP.z, 1.0);
+    return float4(color, 1.0);
 }
 
 float4 PS_OUTLINE(VS_TO_PS In) : SV_Target{
@@ -441,7 +452,7 @@ float4 PS_OUTLINE(VS_TO_PS In) : SV_Target{
         gamma = 2.2;
     }
     if(gUseColorTresses == true){
-        float3 tressColor = CulcShade(In.Normal, In.Tangent, In.Binormal, In.UV, false);
+        float3 tressColor = CulcShade(In.Normal, In.Tangent, In.Binormal, In.posInLVP, In.UV, false);
         color = tressColor * gOutlineColor;
     }else{
         if(gUseOutlineColorTexture == true){
