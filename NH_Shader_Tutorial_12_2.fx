@@ -43,7 +43,7 @@ uniform float3 gBaseColor <
     int UIOrder = 102;
     string UIName = "Base Color";
     string UIWidget = "ColorPicker";
-> = {1.0, 1.0, 1.0};
+> = {1.0f, 1.0f, 1.0f};
 
 uniform bool gUseShadowColorTexture <
     string UIGroup = "Shading";
@@ -64,23 +64,23 @@ uniform float3 gShadowColor <
     int UIOrder = 105;
     string UIName = "Shadow Color";
     string UIWidget = "ColorPicker";
-> = {0.0, 0.0, 0.0};
+> = {0.0f, 0.0f, 0.0f};
 
 uniform float gToonThreshold <
     string UIGroup = "Shading";
     int UIOrder = 106;
     string UIName = "Toon Threshold";
-    float UIMin = -1.0;
-    float UIMax = 1.0;
-> = 0.0;
+    float UIMin = -1.0f;
+    float UIMax = 1.0f;
+> = 0.0f;
 
 uniform float gToonFeather <
     string UIGroup = "Shading";
     int UIOrder = 107;
     string UIName = "Toon Feather";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 0.0;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.0f;
 
 uniform bool gUseOutline <
     string UIGroup = "Outline";
@@ -107,15 +107,15 @@ uniform float3 gOutlineColor <
     int UIOrder = 203;
     string UIName = "Outline Color";
     string UIWidget = "ColorPicker";
-> = {0.0, 0.0, 0.0};
+> = {0.0f, 0.0f, 0.0f};
 
 uniform float gOutlineWidth <
     string UIGroup = "Outline";
     int UIOrder = 204;
     string UIName = "Outline Width";
-    float UIMin = 0.0;
-    float UIMax = 3.0;
-> = 1.0;
+    float UIMin = 0.0f;
+    float UIMax = 3.0f;
+> = 1.0f;
 
 uniform bool gUseLightDirThin <
     string UIGroup = "Outline";
@@ -127,9 +127,9 @@ uniform float gLightDirThinDegree <
     string UIGroup = "Outline";
     int UIOrder = 206;
     string UIName = "Thin Degree";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 0.0;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.0f;
 
 uniform bool gUseColorTresses <
     string UIGroup = "Outline";
@@ -170,9 +170,9 @@ uniform float gDistanceWidthDegree <
     string UIGroup = "Outline";
     int UIOrder = 212;
     string UIName = "Distance Width Degree";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 1.0;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 1.0f;
 
 uniform bool gUseRim <
     string UIGroup = "Rimlight";
@@ -200,7 +200,7 @@ uniform float3 gRimColor<
     int UIOrder = 303;
     string UIName = "Rim Color"; 
     string UIWidget = "ColorPicker";
-> = {1.0, 1.0, 1.0};
+> = {1.0f, 1.0f, 1.0f};
 
 uniform Texture2D gRimColorTexture<
     string UIGroup = "Rimlight";
@@ -214,25 +214,25 @@ uniform float gRimLevel<
     string UIGroup = "Rimlight";
     int UIOrder = 305;
     string UIName = "Rim Level";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 1.0;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 1.0f;
 
 uniform float gRimArea<
     string UIGroup = "Rimlight";
     int UIOrder = 306;
     string UIName = "Rim Area";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 0.5;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.5f;
 
 uniform float gRimFeather<
     string UIGroup = "Rimlight";
     int UIOrder = 307;
     string UIName = "Rim Feather";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 0.0;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.0f;
 
 uniform bool gLightDirMask <
     string UIGroup = "Rimlight";
@@ -244,9 +244,9 @@ uniform float gLightDirMaskDegree <
     string UIGroup = "Rimlight";
     int UIOrder = 309;
     string UIName = "Thin Degree";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 0.0;
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.0f;
 
 uniform bool gUseNormalMap <
     string UIGroup = "NormalMap";
@@ -266,9 +266,9 @@ uniform float gNormalIntensity <
     string UIGroup = "NormalMap";
     int UIOrder = 402;
     string UIName = "Normal Intensity";
-    float UIMin = 0.0;
-    float UIMax = 5.0;
-> = 1.0;
+    float UIMin = 0.0f;
+    float UIMax = 5.0f;
+> = 1.0f;
 
 uniform bool gUseCastShadow <
     string UIGroup = "CastShadow";
@@ -280,7 +280,7 @@ uniform int gShadowMethod <
     string UIGroup = "CastShadow";
     int UIOrder = 501;
     string UIName = "Shadow Method";
-    string UIFieldNames = "Depth Shadow:PCF Soft Shadow:VSM Soft Shadow";
+    string UIFieldNames = "Depth Shadow:PCF Soft Shadow";
     int UIMin = 0;
     int UIMax = 1;
 > = 0;
@@ -289,18 +289,10 @@ uniform float gShadowIntensity <
     string UIGroup = "CastShadow";
     int UIOrder = 502;
     string UIName = "Shadow Intensity";
-    float UIMin = 0.0;
-    float UIMax = 1.0;
-> = 0.5;
-/*
-uniform int gGausSample <
-    string UIGroup = "CastShadow";
-    int UIOrder = 503;
-    string UIName = "Gaussian Sample Count";
-    int UIMin = 1;
-    int UIMax = 15;
-> = 5;
-*/
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.5f;
+
 uniform bool gUseGamma <
     string UIGroup = "Color Space";
     int UIOrder = 600;
@@ -342,8 +334,8 @@ VS_TO_PS VS(VS_INPUT In){
     Out.Normal = mul(In.Normal, gWIT);
     Out.Tangent = normalize(mul(In.Tangent, gWIT));
     Out.Binormal = cross(In.Normal, In.Tangent).xyz * In.Tangent.w;
-    Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0), gWIT));
-    Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
+    Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0f), gWIT));
+    Out.UV = float2(In.UV.x, (1.0f - In.UV.y));
     Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     Out.posInLVP = mul(In.Position, gMatLight);
     Out.posInLVP.z = distance(mul(In.Position, gW), gLight0Pos)/1000;
@@ -357,7 +349,7 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
     if(gUseOutline == true){
         worldNormal.xyz *= gOutlineWidth;
         if(gUseOutlineMask == true){
-            float outlineMask = float3(1.0, 1.0, 1.0);
+            float outlineMask = float3(1.0f, 1.0f, 1.0f);
             if(gOutlineMaskSource == 0){
                 outlineMask = gOutlineMaskTexture.SampleLevel(gWrapSampler, In.UV, 0).r;
             }else if(gOutlineMaskSource == 1){
@@ -371,7 +363,7 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
         }
         if(gUseDistanceWidth == 1){
             float depth = distance(mul(In.Position, gW).xyz, gVI[3].xyz);
-            worldNormal *= depth * (gDistanceWidthDegree * 0.005);
+            worldNormal *= depth * (gDistanceWidthDegree * 0.005f);
         }
         worldPosition.xyz += worldNormal.xyz;
     }    
@@ -379,59 +371,23 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
     Out.Normal = mul(In.Normal, gWIT);
     Out.Tangent = normalize(mul(In.Tangent, gWIT));
     Out.Binormal = cross(In.Normal, In.Tangent).xyz * In.Tangent.w;
-    Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0), gWIT));
-    Out.UV = float2(In.UV.x, (1.0 - In.UV.y));
+    Out.Binormal = normalize(mul(float4(Out.Binormal, 0.0f), gWIT));
+    Out.UV = float2(In.UV.x, (1.0f - In.UV.y));
     return Out;
 }
-/*
-float CalcGaus(float2 UV){
-    float2 uvOffset_0 = float2(2.0 / 512, 0.0 / 512);
-    float2 uvOffset_1 = float2(0.0 / 512, 2.0 / 512);
-    float2 uvOffset_2 = float2(-2.0 / 512, 0.0 / 512);
-    float2 uvOffset_3 = float2(0.0 / 512, -2.0 / 512);
-    int Count = gGausSample;
-    float weight[30];
-    float t = 0.0;
-    for(int i = 0; i< Count * 2; i++){
-        float r = 1.0 + 2.0 * i;
-        float w = exp(-0.5 * r * r);
-        weight[i] = w;
-        if(i > 0){
-            w *= 2.0;
-        }
-        t += w;
-    }
-    for(int i = 0; i < Count * 2; i++){
-        weight[i] / t;
-    }
-    float mapOutput = gLight0ShadowMap.Sample(gWrapSampler, UV);
-    int num = 0;
-    for(int i=0; i<Count; i++){
-        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, UV + uvOffset_0 * i) * weight[num];
-        num++;
-        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, UV + uvOffset_1 * i) * weight[num];
-        num++;
-        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, UV + uvOffset_2 * i) * weight[num];
-        num++;
-        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, UV + uvOffset_3 * i) * weight[num];
-        num++;
-        i += 4;
-    }
-    return mapOutput.x;
-}
-*/
+
 float3 CalcShade(float4 Normal, float4 Tangent, float3 Binormal, float4 posInLVP, float2 UV, bool mode){
     float3 OutColor;
     float3 lightDir = normalize(gLight0Dir);
     float3 baseColor;
     float3 shadowColor;
-    float gamma = 1.0;
+    float gamma = 1.0f;
     if(gUseGamma == true){
         gamma = 2.2;
     }
     float3 normal;
     if(mode == true && gUseNormalMap == true){
-        normal = gNormalMap.Sample(gWrapSampler, UV).xyz * 2.0 - 1.0;
+        normal = gNormalMap.Sample(gWrapSampler, UV).xyz * 2.0f - 1.0f;
         normal.xy *= gNormalIntensity;
         normal = normal.x * Tangent + normal.y * Binormal + normal.z * Normal;
     }else{
@@ -451,31 +407,21 @@ float3 CalcShade(float4 Normal, float4 Tangent, float3 Binormal, float4 posInLVP
     } 
     if(mode == true && gUseCastShadow == true){
         float2 shadowMapUV = posInLVP.xy / posInLVP.w;
-        shadowMapUV *= float2(0.5, -0.5);
-        shadowMapUV += 0.5;
+        shadowMapUV *= float2(0.5f, -0.5f);
+        shadowMapUV += float2(0.5f, 0.5f);
         float zInLVP = posInLVP.z / posInLVP.w;
         if(gShadowMethod == 0){
-            if(shadowMapUV.x > 0.0 && shadowMapUV.x < 1.0 && shadowMapUV.y > 0.0 && shadowMapUV.y < 1.0){
+            if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
                 float zInShadowMap = gLight0ShadowMap.Sample(gWrapSampler, shadowMapUV).r;
                 if(zInLVP > zInShadowMap){
                     N *= gShadowIntensity;
                 }
             }
-        }/*else if(gShadowMethod == 1){
+        }else if(gShadowMethod == 1){
             float shadow = gLight0ShadowMap.SampleCmpLevelZero(gCompSampler, shadowMapUV, zInLVP);
-            shadow = 1.0 - (shadow * (1.0 - gShadowIntensity));
+            shadow = 1.0f - (shadow * (1.0f - gShadowIntensity));
             N *= shadow;
-        }else if(gShadowMethod == 2){
-            float shadowValue = CalcGaus(shadowMapUV);
-            if(zInLVP > shadowValue.r){
-                float depth_sq = shadowValue * shadowValue;
-                float variance = min(max((posInLVP * posInLVP) - depth_sq, 0.0001), 1.0);
-                float md = zInLVP - shadowValue;
-                float lightFactor = variance / (variance + md * md);
-                N *= lightFactor;
-            }
         }
-        */
     }
     OutColor = lerp(shadowColor, baseColor, N);
     return OutColor;
@@ -483,13 +429,13 @@ float3 CalcShade(float4 Normal, float4 Tangent, float3 Binormal, float4 posInLVP
 
 float4 PS(VS_TO_PS In) : SV_Target{
     float3 color = CalcShade(In.Normal, In.Tangent, In.Binormal, In.posInLVP, In.UV, true);
-    float gamma = 1.0;
+    float gamma = 1.0f;
     if(gUseGamma == true){
-        gamma = 2.2;
+        gamma = 2.2f;
     }
     float3 normal;
     if(gUseNormalMap == true){
-        normal = gNormalMap.Sample(gWrapSampler, In.UV).xyz * 2.0 - 1.0;
+        normal = gNormalMap.Sample(gWrapSampler, In.UV).xyz * 2.0f - 1.0f;
         normal.xy *= gNormalIntensity;
         normal = normal.x * In.Tangent + normal.y * In.Binormal + normal.z * In.Normal;
     }else{
@@ -502,8 +448,8 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }else if(gUseRimColorTexture == false){
             rimColor = gRimColor;
         }
-        float vdn = clamp(0.0, 1.0, dot(In.View, normal.xyz) + 1.0);
-        float rimArea = 1.0 - gRimArea;
+        float vdn = clamp(0.0f, 1.0f, dot(In.View, normal.xyz) + 1.0f);
+        float rimArea = 1.0f - gRimArea;
         vdn = smoothstep(rimArea - gRimFeather, rimArea + gRimFeather, vdn);
         if(gUseRimColorTexture == true){
             rimColor = pow(gRimColorTexture.Sample(gWrapSampler, In.UV).xyz, gamma);
@@ -511,12 +457,12 @@ float4 PS(VS_TO_PS In) : SV_Target{
             rimColor = gRimColor;
         }
         if(gRimBlendMode == 0){
-            rimColor = 1.0 - (1.0 - color) * (1.0 - rimColor);
+            rimColor = 1.0f - (1.0f - color) * (1.0f - rimColor);
         }else if(gRimBlendMode == 1){
             rimColor += color;
         }else if(gRimBlendMode == 2){
-            rimColor = clamp(0.0, 0.99, rimColor);
-            rimColor = color / (1.0 - rimColor);
+            rimColor = clamp(0.0f, 0.99f, rimColor);
+            rimColor = color / (1.0f - rimColor);
         }
         if(gLightDirMask == true){
             float LN =  max(gLightDirMaskDegree, dot(normal, gLight0Dir));
@@ -528,10 +474,10 @@ float4 PS(VS_TO_PS In) : SV_Target{
 }
 
 float4 PS_OUTLINE(VS_TO_PS In) : SV_Target{
-    float3 color = float3(1.0, 1.0, 1.0);
-    float gamma = 1.0;
+    float3 color = float3(1.0f, 1.0f, 1.0f);
+    float gamma = 1.0f;
     if(gUseGamma == true){
-        gamma = 2.2;
+        gamma = 2.2f;
     }
     if(gUseColorTresses == true){
         float3 tressColor = CalcShade(In.Normal, In.Tangent, In.Binormal, In.posInLVP, In.UV, false);
@@ -543,7 +489,7 @@ float4 PS_OUTLINE(VS_TO_PS In) : SV_Target{
             color = gOutlineColor;
         }
     }
-    return float4(color, 1.0);
+    return float4(color, 1.0f);
 }
 
 RasterizerState CullFront{
