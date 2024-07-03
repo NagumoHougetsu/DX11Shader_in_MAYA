@@ -280,7 +280,7 @@ uniform int gShadowMethod <
     string UIGroup = "CastShadow";
     int UIOrder = 501;
     string UIName = "Shadow Method";
-    string UIFieldNames = "Depth Hard Shadow:PCF Soft Shadow:VSM Soft Shadow";
+    string UIFieldNames = "Depth Shadow(Hard):PCF SoftShadow:VSM Soft Shadow";
     int UIMin = 0;
     int UIMax = 2;
 > = 0;
@@ -482,22 +482,27 @@ float4 PS(VS_TO_PS In) : SV_Target{
             if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
                 float zInShadowMap = gLight0ShadowMap.Sample(gWrapSampler, shadowMapUV).r;
                 if(zInLVP > zInShadowMap){
-                    N = lerp(0.0, 1.0, 1.0 - gShadowIntensity);
+                    float shade = gShadowIntensity;
+                    N *= shade;
                 }
             }
         }else if(gShadowMethod == 1){
-            float shadow = gLight0ShadowMap.SampleCmpLevelZero(gCompSampler, shadowMapUV, zInLVP);
-            float shade = 1.0 - (shadow * gShadowIntensity);
-            N = lerp(0.0, 1.0, shade);
+            if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
+                float shadow = gLight0ShadowMap.SampleCmpLevelZero(gCompSampler, shadowMapUV, zInLVP);
+                float shade = 1.0f - shadow * gShadowIntensity;
+                N *= shade;
+            }
         }else if(gShadowMethod == 2){
-            float shadowValue = CalcGaus(shadowMapUV);
-            if(zInLVP > shadowValue){
-                float depth_sq = shadowValue * shadowValue;
-                float variance = min(max((In.posInLVP * In.posInLVP) - depth_sq, 0.0001), 1.0);
-                float md = zInLVP - shadowValue;
-                float lightFactor = variance / (variance + md * md);
-                float shade = 1.0 - ((1.0 - lightFactor) * gShadowIntensity);
-                N = lerp(0.0, 1.0, shade);
+            if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
+                float shadowValue = CalcGaus(shadowMapUV);
+                if(zInLVP > shadowValue){
+                    float depth_sq = shadowValue * shadowValue;
+                    float variance = min(max((In.posInLVP * In.posInLVP) - depth_sq, 0.0001f), 1.0f);
+                    float md = zInLVP - shadowValue;
+                    float lightFactor = variance / (variance + md * md);
+                    float shade = 1.0f - (1.0f - lightFactor) * gShadowIntensity;
+                    N *= shade;
+                }
             }
         }
     }

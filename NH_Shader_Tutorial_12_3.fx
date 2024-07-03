@@ -293,29 +293,21 @@ uniform float gShadowIntensity <
     float UIMax = 1.0f;
 > = 0.5f;
 
-uniform int gSampleCount <
+uniform int gGausOffset <
     string UIGroup = "CastShadow";
     int UIOrder = 503;
-    string UIName = "Sample Count";
-    int UIMin = 0;
+    string UIName = "Gaussian Offset";
+    int UIMin = 1;
     int UIMax = 10;
-> = 7;
+> = 1;
 
-uniform float gSampleDistance <
-    string UIGroup = "CastShadow";
-    int UIOrder = 504;
-    string UIName = "Sample Distance";
-    float UIMin = 0.0f;
-    float UIMax = 10.0f;
-> = 0.0f;
-
-uniform float gGausIntensity <
+uniform float gGausBlur <
     string UIGroup = "CastShadow";
     int UIOrder = 505;
-    string UIName = "Gaussian Blur Intensity";
-    float UIMin = 0.0f;
-    float UIMax = 1.0f;
-> = 0.5f;
+    string UIName = "Gaussian Blur";
+    float UIMin = 1.0f;
+    float UIMax = 50.0f;
+> = 10.0f;
 
 
 uniform bool gUseGamma <
@@ -401,35 +393,36 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
     return Out;
 }
 
+//ガウスフィルター関数
 float CalcGaus(float2 UV){
-    float2 size = float2(512.0f, 512.0f);
-    float2 offsetU = size.xy * float2(0.0f, 1.0f) * gSampleDistance;
-    float2 offsetV = size.xy * float2(1.0f, 0.0f) * gSampleDistance;
-    float2 coordU = UV - offsetU * ((gSampleCount - 1) * 0.5);
-    float2 coordV = UV - offsetV * ((gSampleCount - 1) * 0.5);
-    float weight[64];
-    float t = 0.0;
-    float d = gSampleDistance * gSampleDistance / 100.0f;
-    for(int i = 0; i < gSampleCount; i++){
-        float r = 1.0 + 2.0 * i;
+    //仮想のシャドウマップの解像度
+    float size = 512.0f;
+    //画像のずらし成分
+    float2 offsetU = float2(gGausOffset / size, 0.0f);
+    float2 offsetV = float2(0.0f, gGausOffset / size);
+    //重み計算
+    float weight[10];
+    float t = 0.0f;
+    float d = gGausBlur * gGausBlur / 1000.0f;
+    for(int i = 0; i < gGausOffset; i++){
+        float r = 2.0f * i;
         float w = exp(-0.5 * r * r / d);
         weight[i] = w;
         if(i > 0){
-            w *= 2.0;
+            w *= 2.0f;
         }
         t += w;
     }
-    for(int i = 0; i < gSampleCount; i++){
+    for(int i = 0; i < gGausOffset; i++){
         weight[i] / t;
     }
+    //ガウスブラー処理
     float mapOutput = 0.0f;
-    for(int i = 0; i < gSampleCount; i++){
-        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, coordU) * weight[i] * 0.5;
-        coordU += offsetU;
+    for(int i = 0; i < gGausOffset; i++){
+        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, UV - offsetU * i) * weight[i] * 0.5;
     }
-    for(int i = 0; i < gSampleCount; i++){
-        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, coordV) * weight[i] * 0.5;
-        coordV += offsetV;
+    for(int i = 0; i < gGausOffset; i++){
+        mapOutput += gLight0ShadowMap.Sample(gWrapSampler, UV - offsetV * i) * weight[i] * 0.5;
     }
     return mapOutput;
 }
