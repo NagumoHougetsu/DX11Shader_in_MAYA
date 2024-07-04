@@ -280,7 +280,7 @@ uniform int gShadowMethod <
     string UIGroup = "CastShadow";
     int UIOrder = 501;
     string UIName = "Shadow Method";
-    string UIFieldNames = "Depth Shadow(Hard):PCF SoftShadow:VSM Soft Shadow";
+    string UIFieldNames = "DepthMap Hard:PCF Soft:VSM Soft";
     int UIMin = 0;
     int UIMax = 2;
 > = 0;
@@ -333,7 +333,7 @@ uniform SamplerState gWrapSampler{
 
 uniform SamplerComparisonState gCompSampler{
     Filter = COMPARISON_MIN_MAG_MIP_LINEAR;
-    ComparisonFunc = GREATER;
+    ComparisonFunc = LESS;
     MaxAnisotropy = 1;
 };
 
@@ -482,14 +482,14 @@ float4 PS(VS_TO_PS In) : SV_Target{
             if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
                 float zInShadowMap = gLight0ShadowMap.Sample(gWrapSampler, shadowMapUV).r;
                 if(zInLVP > zInShadowMap){
-                    float shade = gShadowIntensity;
+                    float shade = 1.0 - gShadowIntensity;
                     N *= shade;
                 }
             }
         }else if(gShadowMethod == 1){
             if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
                 float shadow = gLight0ShadowMap.SampleCmpLevelZero(gCompSampler, shadowMapUV, zInLVP);
-                float shade = 1.0f - shadow * gShadowIntensity;
+                float shade = 1.0 - (1.0f - shadow) * gShadowIntensity;
                 N *= shade;
             }
         }else if(gShadowMethod == 2){
