@@ -411,7 +411,7 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
 }
 
 //ガウスフィルター関数
-float CalcGaus(float2 UV){
+float2 CalcGaus(float2 UV){
     //仮想のシャドウマップの解像度
     float size;
     if(gShadowMapRes == 0){
@@ -435,43 +435,43 @@ float CalcGaus(float2 UV){
     float weightSum = 0.0f;
     for(int i = 0; i < gKernelSize ; i++){
         float delta =  i - distance;
-        weight[i] = (1.0f / (2.0 * acos(-1) * gSigma * gSigma)) * exp(-1.0f * (delta * delta * 2.0f) / (2.0f * gSigma * gSigma));
+        weight[i] = (1.0f / sqrt((2.0 * acos(-1) * gSigma * gSigma))) * exp(-1.0f * (delta * delta ) / (2.0f * gSigma * gSigma));
         weightSum += weight[i];
     }
     for(int i = 0; i < gKernelSize; i++){
         weight[i] /= weightSum;
     }
     float texelSize = 1.0 / size;
-    float2 offset_01 = float2(texelSize, 0.0f);
-    float2 offset_02 = float2(texelSize / 2.0f, texelSize / 2.0f);
-    float2 offset_03 = float2(0.0f, texelSize);
-    float2 offset_04 = float2(-texelSize / 2.0f, texelSize / 2.0f);
-    float2 offset_05 = float2(-texelSize, 0.0f);
-    float2 offset_06 = float2(-texelSize / 2.0f, -texelSize / 2.0f);
-    float2 offset_07 = float2(0.0f, -texelSize);
-    float2 offset_08 = float2(texelSize / 2.0f, -texelSize / 2.0f);
+    float2 offset_01 = float2(texelSize * sin(radians(90)), 0.0f);
+    float2 offset_02 = float2(texelSize * sin(radians(45)), texelSize * sin(radians(45)));
+    float2 offset_03 = float2(0.0f, texelSize * sin(radians(90)));
+    float2 offset_04 = float2(-texelSize * sin(radians(45)), texelSize * sin(radians(45)));
     float2 coord_01 = UV - distance * offset_01;
     float2 coord_02 = UV - distance * offset_02;
     float2 coord_03 = UV - distance * offset_03;
     float2 coord_04 = UV - distance * offset_04;
-    float2 coord_05 = UV - distance * offset_05;
-    float2 coord_06 = UV - distance * offset_06;
-    float2 coord_07 = UV - distance * offset_07;
-    float2 coord_08 = UV - distance * offset_08;
-    float output = 0.0f;
-    for(int i = 0; i < gKernelSize; i++){
-        if(gSamplingPoints == 0){
-            output += gLight0ShadowMap.Sample(gWrapSampler, coord_01).r * weight[i] * 0.5;
-            coord_01 += offset_01;
-            output += gLight0ShadowMap.Sample(gWrapSampler, coordV).r * weight[i] * 0.5;
-            coordV += offsetV;
+    float2 output = float2(0.0f, 0.0f);
+    if(gSamplingPoints == 0){
+        for(int i = 0; i < gKernelSize; i++){
+            output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_02).r * weight[i] * 0.5;
+            coord_02 += offset_02;
+            output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_04).r * weight[i] * 0.5;
+            coord_04 += offset_04;
         }
-        
+    }else if(gSamplingPoints == 1){
+        for(int i = 0; i < gKernelSize; i++){
+            output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_01).r * weight[i] * 0.25;
+            coord_01 += offset_01;
+            output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_02).r * weight[i] * 0.25;
+            coord_02 += offset_02;
+            output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_03).r * weight[i] * 0.25;
+            coord_03 += offset_03;
+            output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_04).r * weight[i] * 0.25;
+            coord_04 += offset_04;
+        }
     }
-    for(int i = 0; i < gKernelSize; i++){
-        output += gLight0ShadowMap.Sample(gWrapSampler, coordV).r * weight[i] * 0.5;
-        coordV += offsetV;
-    }
+    output.y = gLight0ShadowMap.Sample(gWrapSampler, UV).b;
+    output.y *= output.y;
     return output;    
 }
 
@@ -516,11 +516,11 @@ float4 PS(VS_TO_PS In) : SV_Target{
             }
         }else if(gShadowMethod == 2){
             if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
-                float shadowValue = CalcGaus(shadowMapUV);
-                if(zInLVP > shadowValue){
-                    float depth_sq = shadowValue * shadowValue;
-                    float variance = min(max((In.posInLVP * In.posInLVP) - depth_sq, 0.0001f), 1.0f);
-                    float md = zInLVP - shadowValue;
+                float2 shadowValue = CalcGaus(shadowMapUV);
+                if(zInLVP > shadowValue.r && zInLVP <= 1.0){
+                    float depth_sq = shadowValue.r * shadowValue.r;
+                    float variance = clamp(0.0f, 1.0f, max(shadowValue.g - depth_sq, 0.0001f));
+                    float md = zInLVP - shadowValue.r; 
                     float lightFactor = variance / (variance + md * md);
                     float shade = 1.0f - (1.0f - lightFactor) * gShadowIntensity;
                     N *= shade;
