@@ -21,9 +21,14 @@ Texture2D gLight0ShadowMap  :   ShadowMap <
     int UIOrder = 2;
 >;
 
-float4x4 gMatLight  :   shadowMapMatrix <
+float gLight0ShadowMapBias  :   ShadowMapBias <
     string Object = "Light 0";
     int UIOrder = 3;
+>;
+
+float4x4 gMatLight  :   shadowMapMatrix <
+    string Object = "Light 0";
+    int UIOrder = 4;
 >;
 
 //トゥーンシェーディング関連
@@ -436,6 +441,19 @@ VS_TO_PS VS_OUTLINE(VS_INPUT In){
     return Out;
 }
 
+float2 CalcDepth(float2 UV, Texture2D map){
+    float2 depth;
+    float4 depthMap = map.Sample(gWrapSampler, UV);
+    float bias = gLight0ShadowMapBias;
+    float rMask = 1.0f;
+    float gMask = 1.0f / 255.0f;
+    float bMask = 1.0f / (255.0f * 255.0f);
+    float aMask = 1.0f / (255.0f * 255.0f * 255.0f);
+    depth.x = dot(depthMap, float4(rMask, gMask, bMask, aMask));
+    depth.y = depth.x * depth.x;
+    return depth;
+}
+
 //ガウスフィルター関数
 float2 CalcGaus(float2 UV){
     //仮想のシャドウマップの解像度
@@ -479,13 +497,28 @@ float2 CalcGaus(float2 UV){
     float2 output = float2(0.0f, 0.0f);
     if(gSamplingPoints == 0){
         for(int i = 0; i < gKernelSize; i++){
+            output.x += CalcDepth(coord_01, gLight0ShadowMap).r * weight[i] * 0.5;
+            coord_01 -= offset_01;
+            output.x += CalcDepth(coord_03, gLight0ShadowMap).r * weight[i] * 0.5;
+            coord_03 -= offset_03;
+            /*
             output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_01).r * weight[i] * 0.5;
             coord_01 -= offset_01;
             output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_03).r * weight[i] * 0.5;
             coord_03 -= offset_03;
+            */
         }
     }else if(gSamplingPoints == 1){
         for(int i = 0; i < gKernelSize; i++){
+            output.x += CalcDepth(coord_01, gLight0ShadowMap).r * weight[i] * 0.25;
+            coord_01 -= offset_01;
+            output.x += CalcDepth(coord_02, gLight0ShadowMap).r * weight[i] * 0.25;
+            coord_02 -= offset_02;
+            output.x += CalcDepth(coord_03, gLight0ShadowMap).r * weight[i] * 0.25;
+            coord_03 -= offset_03;
+            output.x += CalcDepth(coord_04, gLight0ShadowMap).r * weight[i] * 0.25;
+            coord_04 -= offset_04;
+            /*
             output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_01).r * weight[i] * 0.25;
             coord_01 -= offset_01;
             output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_02).r * weight[i] * 0.25;
@@ -494,9 +527,11 @@ float2 CalcGaus(float2 UV){
             coord_03 -= offset_03;
             output.x += gLight0ShadowMap.Sample(gWrapSampler, coord_04).r * weight[i] * 0.25;
             coord_04 -= offset_04;
+            */
         }
     }
-    output.y = gLight0ShadowMap.Sample(gWrapSampler, UV).b;
+    output.y = CalcDepth(UV, gLight0ShadowMap);
+    //output.y = gLight0ShadowMap.Sample(gWrapSampler, UV).r;
     output.y *= output.y;
     return output;    
 }
@@ -529,7 +564,8 @@ float4 PS(VS_TO_PS In) : SV_Target{
         float zInLVP = In.posInLVP.z / In.posInLVP.w;
         if(gShadowMethod == 0){
             if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
-                float zInShadowMap = gLight0ShadowMap.Sample(gWrapSampler, shadowMapUV).r;
+                float zInShadowMap = CalcDepth(shadowMapUV, gLight0ShadowMap);
+                //float zInShadowMap = gLight0ShadowMap.Sample(gWrapSampler, shadowMapUV).r;
                 if(zInLVP > zInShadowMap){
                     float shade = 1.0 - gShadowIntensity;
                     N *= shade;
@@ -544,9 +580,9 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }else if(gShadowMethod == 2){
             if(shadowMapUV.x > 0.0f && shadowMapUV.x < 1.0f && shadowMapUV.y > 0.0f && shadowMapUV.y < 1.0f){
                 float2 shadowValue = CalcGaus(shadowMapUV);
-                if(zInLVP > shadowValue.r && zInLVP <= 1.0){
-                    float depth_sq = shadowValue.r * shadowValue.r;
-                    float variance = clamp(0.0f, 1.0f, max(shadowValue.g - depth_sq, 0.0001f));
+                if(zInLVP > shadowValue.x){
+                    float depth_sq = shadowValue.x * shadowValue.x;
+                    float variance = clamp(0.0f, 1.0f, max(shadowValue.y - depth_sq, 0.0001f));
                     float md = zInLVP - shadowValue.r; 
                     float lightFactor = variance / (variance + md * md);
                     float shade = 1.0f - (1.0f - lightFactor) * gShadowIntensity;
