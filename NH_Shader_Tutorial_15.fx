@@ -345,10 +345,55 @@ uniform int gSamplingPoints <
     int UIMax = 1;
 > = 1;
 
+//ハイライト関連
+uniform bool gUseHilight <
+    string UIGroup = "Hilight";
+    int UIOrder = 600;
+    string UIName = "Use Hilight";
+> = false;
+
+uniform bool gUseHilightTexture <
+    string UIGroup = "Hilight";
+    int UIOrder = 601;
+    string UIName = "Use Hilight Texture";
+> = false;
+
+uniform int gHilightBlendMode <
+    string UIGroup = "Hilight";
+    int UIOrder = 602;
+    string UIName = "Hilight Blend Mode";
+    string UIFieldNames = "Screen:Add:Dodge color";
+    int UIMin = 0;
+    int UIMax = 2;
+> = 0;
+
+uniform float3 gHilightColor <
+    string UIGroup = "Hilight";
+    int UIOrder = 603;
+    string UIName = "Hilight Color";
+    string UIWidget = "ColorPicker";
+> = (1.0f, 1.0f, 1.0f);
+
+uniform Texture2D gHilightTexture <
+    string UIGroup = "Hilight";
+    int UIOrder = 604;
+    string UIName = "Hilight Texture";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
+
+uniform float gHilightIntensity <
+    string UIGroup = "Hilight";
+    int UIOrder = 605;
+    string UIName = "Hilight Intensity";
+    float UIMin = 0.0f;
+    float UIMax = 5.0f;
+> = 5.0f;
+
 //ガンマ補正関連
 uniform bool gUseGamma <
     string UIGroup = "Color Space";
-    int UIOrder = 600;
+    int UIOrder = 700;
     string UIName = "Gamma 2.2";
 > = true;
 
@@ -586,6 +631,28 @@ float4 PS(VS_TO_PS In) : SV_Target{
     } 
     //トゥーンシェーディングの最終計算
     float3 color = lerp(shadowColor, baseColor, N);
+
+    //ハイライトの計算
+    if(gUseHilight == true){
+        float3 hiColor;
+        if(gUseHilightTexture == true){
+            hiColor = pow(gHilightTexture.Sample(gWrapSampler, In.UV), gamma).rgb;
+            hiColor *= gHilightColor;
+        }else{
+            hiColor = gHilightColor;
+        }
+        if(gHilightBlendMode == 0){
+            color = (1.0f - (1.0f - color) * (1.0f - hiColor * gHilightIntensity));
+        }else if(gHilightBlendMode == 1){
+            color += hiColor * gHilightIntensity;
+        }else if(gRimBlendMode == 2){
+            //hiColor = clamp(0.0f, 0.99f, hiColor);
+            hiColor = clamp(1.0f - hiColor * gHilightIntensity, 0.0001f, 1.0f);
+            hiColor = smoothstep(0.0f, 1.0f, hiColor);
+            color /= hiColor;
+        }
+    }
+
     //リムカラーの計算
     float3 rimColor;
     if(gUseRim == true){
