@@ -388,12 +388,21 @@ uniform float gHilightIntensity <
     string UIName = "Hilight Intensity";
     float UIMin = 0.0f;
     float UIMax = 5.0f;
-> = 5.0f;
+> = 1.0f;
+
+//マットキャップ関連
+uniform bool gUseMatcap <
+    string UIGroup = "Matcap";
+    int UIOrder = 700;
+    string UIName = "Use Matcap";
+> = false;
+
+
 
 //ガンマ補正関連
 uniform bool gUseGamma <
     string UIGroup = "Color Space";
-    int UIOrder = 700;
+    int UIOrder = 800;
     string UIName = "Gamma 2.2";
 > = true;
 
@@ -645,7 +654,7 @@ float4 PS(VS_TO_PS In) : SV_Target{
             color = (1.0f - (1.0f - color) * (1.0f - hiColor * gHilightIntensity));
         }else if(gHilightBlendMode == 1){
             color += hiColor * gHilightIntensity;
-        }else if(gRimBlendMode == 2){
+        }else if(gHilightBlendMode == 2){
             //hiColor = clamp(0.0f, 0.99f, hiColor);
             hiColor = clamp(1.0f - hiColor * gHilightIntensity, 0.0001f, 1.0f);
             hiColor = smoothstep(0.0f, 1.0f, hiColor);
