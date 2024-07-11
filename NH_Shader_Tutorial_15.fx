@@ -1,6 +1,7 @@
 //変換行列のグローバル宣言
 float4x4 gWVP   :   WorldViewProjection;
 float4x4 gWIT   :   WorldInverseTranspose;
+float4x4 gWVIT  :   WorldViewInverseTranspose;
 float4x4 gW     :   World;
 float4x4 gVI    :   ViewInverse;
 float4x4 gVP    :   ViewProjection;
@@ -387,8 +388,22 @@ uniform float gHilightIntensity <
     int UIOrder = 605;
     string UIName = "Hilight Intensity";
     float UIMin = 0.0f;
-    float UIMax = 5.0f;
+    float UIMax = 1.0f;
 > = 1.0f;
+
+uniform bool gUseLightDirHilightMask <
+    string UIGroup = "Hilight";
+    int UIOrder = 606;
+    string UIName = "Use LightDir Mask";
+> = false;
+
+uniform float gLightDirHilightMaskDegree <
+    string UIGroup = "Hilight";
+    int UIOrder = 607;
+    string UIName = "LightDir Mask Degree";
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 0.0f;
 
 //マットキャップ関連
 uniform bool gUseMatcap <
@@ -397,7 +412,35 @@ uniform bool gUseMatcap <
     string UIName = "Use Matcap";
 > = false;
 
+uniform bool gUseMatcapMask <
+    string UIGroup = "Matcap";
+    int UIOrder = 701;
+    string UIName = "Use Matcap Mask";
+> = false;
 
+uniform Texture2D gMatcapMaskTexture <
+    string UIGroup = "Matcap";
+    int UIOrder = 702;
+    string UIName = "Matcap Mask Texture";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
+
+uniform float gMatCapBlend <
+    string UIGroup = "Matcap";
+    int UIOrder = 703;
+    string UIName = "Matcap Blend";
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 1.0f;
+
+uniform Texture2D gSphereMap <
+    string UIGroup = "Matcap";
+    int UIOrder = 703;
+    string UIName = "Sphere Map";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
 
 //ガンマ補正関連
 uniform bool gUseGamma <
@@ -640,7 +683,22 @@ float4 PS(VS_TO_PS In) : SV_Target{
     } 
     //トゥーンシェーディングの最終計算
     float3 color = lerp(shadowColor, baseColor, N);
-
+    
+    //マットキャップ部分
+    if(gUseMatcap == true){
+        float4 matOut;
+        float4 vNormal = mul(In.Normal, gWVIT);
+        float2 sphereEnvUV = vNormal.xy * 0.5f + 0.5f;
+        sphereEnvUV.y = 1.0f - sphereEnvUV.y;
+        matOut = gSphereMap.Sample(gWrapSampler, sphereEnvUV);
+        float blend;
+        if(gUseMatcapMask == true){
+            blend = gMatcapMaskTexture.Sample(gWrapSampler, In.UV).r * gMatCapBlend;
+        }else{
+            blend = gMatCapBlend;
+        }
+        color = lerp(color, matOut, blend);
+    }
     //ハイライトの計算
     if(gUseHilight == true){
         float3 hiColor;
@@ -651,17 +709,20 @@ float4 PS(VS_TO_PS In) : SV_Target{
             hiColor = gHilightColor;
         }
         if(gHilightBlendMode == 0){
-            color = (1.0f - (1.0f - color) * (1.0f - hiColor * gHilightIntensity));
+            hiColor = 1.0f - (1.0f - color) * (1.0f - hiColor * gHilightIntensity);
         }else if(gHilightBlendMode == 1){
-            color += hiColor * gHilightIntensity;
+            hiColor = color + (hiColor * gHilightIntensity);
         }else if(gHilightBlendMode == 2){
-            //hiColor = clamp(0.0f, 0.99f, hiColor);
-            hiColor = clamp(1.0f - hiColor * gHilightIntensity, 0.0001f, 1.0f);
-            hiColor = smoothstep(0.0f, 1.0f, hiColor);
-            color /= hiColor;
+            hiColor = smoothstep(0.0f, 1.0f, clamp(1.0f - hiColor * gHilightIntensity, 0.0001f, 1.0f));
+            hiColor = color / hiColor;
+        }
+        if(gUseLightDirHilightMask == true){
+            float LN = clamp(smoothstep(0.0f, 1.0f, dot(normal, -gLight0Dir)), gLightDirHilightMaskDegree, 1.0f);
+            color = lerp(color, hiColor, LN);
+        }else{
+            color = hiColor;
         }
     }
-
     //リムカラーの計算
     float3 rimColor;
     if(gUseRim == true){
@@ -692,6 +753,7 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }
         color = lerp(color, rimColor, vdn * gRimLevel);
     }
+
     //最終出力
     return float4(color, 1.0);
 }
