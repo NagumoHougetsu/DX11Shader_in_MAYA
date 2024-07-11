@@ -793,7 +793,7 @@ float4 PS(VS_TO_PS In) : SV_Target{
         float4 vNormal = mul(In.Normal, gWVIT);
         float2 sphereEnvUV = vNormal.xy * 0.5f + 0.5f;
         sphereEnvUV.y = 1.0f - sphereEnvUV.y;
-        matOut = gSphereMap.Sample(gWrapSampler, sphereEnvUV);
+        matOut = pow(gSphereMap.Sample(gWrapSampler, sphereEnvUV), gamma);
         float blend;
         if(gUseMatcapMask == true){
             blend = gMatcapMaskTexture.Sample(gWrapSampler, In.UV).r * gMatCapBlend;
