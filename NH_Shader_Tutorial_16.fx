@@ -373,7 +373,7 @@ uniform float3 gHilightColor <
     int UIOrder = 603;
     string UIName = "Hilight Color";
     string UIWidget = "ColorPicker";
-> = (1.0f, 1.0f, 1.0f);
+> = {1.0f, 1.0f, 1.0f};
 
 uniform Texture2D gHilightTexture <
     string UIGroup = "Hilight";
@@ -442,10 +442,78 @@ uniform Texture2D gSphereMap <
     string ResourceType = "2D";
 >;
 
+//頬の光沢反転関連
+uniform bool gUseCheekNormalFlip <
+    string UIGroup = "Cheek Shading";
+    int UIOrder = 800;
+    string UIName = "Use Cheek Shading";
+> = false;
+
+uniform Texture2D gCheekMask <
+    string UIGroup = "Cheek Shading";
+    int UIOrder = 801;
+    string UIName = "Cheek Mask";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
+
+uniform float gCheekBlend <
+    string UIGroup = "Cheek Shading";
+    int UIOrder = 802;
+    string UIName = "Cheek Blend";
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 1.0f;
+
+uniform float3 gCheekTwistAxis <
+    string UIGroup = "Cheek Shading";
+    int UIOrder = 803;
+    string UIName = "Twist Axis";
+    float UIMin = -1.0f;
+    float UIMax = 1.0f;
+> = {-1.0f, 1.0f, 1.0f};
+
+//疑似ノーマルマップ関連
+uniform bool gUseshadowShading <
+    string UIGroup = "Shadow Shading";
+    int UIOrder = 900;
+    string UIName = "Use Shadow Shading";
+> = false;
+
+uniform bool gUseColorNormal <
+    string UIGroup = "Shadow Shading";
+    int UIOrder = 901;
+    string UIName = "Use Vertex Color Normal";
+> = false;
+
+uniform Texture2D gShadowShadingMask <
+    string UIGroup = "Shadow Shading";
+    int UIOrder = 902;
+    string UIName = "Shadow Shading Mask";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
+
+uniform float gShadowShadingBlend <
+    string UIGroup = "Shadow Shading";
+    int UIOrder = 903;
+    string UIName = "Shading Blend";
+    float UIMin = 0.0f;
+    float UIMax = 1.0f;
+> = 1.0f;
+
+uniform float3 gShadowShadingTwistAxis <
+    string UIGroup = "Shadow Shading";
+    int UIOrder = 904;
+    string UIName = "Shading Twist Axis";
+    float UIMin = -1.0f;
+    float UIMax = 1.0f;
+> = {1.0f, 0.5f, 0.5f};
+
 //ガンマ補正関連
 uniform bool gUseGamma <
     string UIGroup = "Color Space";
-    int UIOrder = 800;
+    int UIOrder = 1000;
     string UIName = "Gamma 2.2";
 > = true;
 
@@ -481,6 +549,7 @@ struct VS_TO_PS{
     float2 UV       :   TEXCOORD0;
     float3 View     :   TEXCOORD1;
     float4 posInLVP :   TEXCOORD2;
+    float4 Color    :   COLOR1;
 };
 
 //頂点シェーダー（メイン）
@@ -495,6 +564,7 @@ VS_TO_PS VS(VS_INPUT In){
     Out.View = normalize(mul(In.Position, gW).xyz - gVI[3].xyz);
     Out.posInLVP = mul(mul(In.Position, gW), gMatLight);
     //Out.posInLVP.z = distance(mul(In.Position, gW), gLight0Pos)/1000;
+    Out.Color = In.Color;
     return Out;
 }
 
@@ -633,8 +703,41 @@ float4 PS(VS_TO_PS In) : SV_Target{
     }
     //ライトと法線の内積からトゥーンシェーディングの計算
     float3 lightDir = normalize(gLight0Dir);
-    float N = dot(normal, -lightDir);
-    N = smoothstep(gToonThreshold - gToonFeather, gToonThreshold + gToonFeather, N);
+    float N;
+    //頬の法線調整部分
+    if(gUseCheekNormalFlip == true){
+        float3 cheekNormal;
+        cheekNormal.x = normal.x * gCheekTwistAxis.x;
+        cheekNormal.y = normal.y * gCheekTwistAxis.y;
+        cheekNormal.z = normal.z * gCheekTwistAxis.z;
+        float cheekMask = gCheekMask.Sample(gWrapSampler, In.UV).r;
+        float defD = dot(normal, -lightDir);
+        defD = smoothstep(gToonThreshold - gToonFeather, gToonThreshold + gToonFeather, defD);
+        float fixD = dot(cheekNormal, -lightDir);
+        fixD = smoothstep(gToonThreshold - gToonFeather, gToonThreshold + gToonFeather, fixD) * gCheekBlend;
+        fixD = max(fixD, defD);
+        N = lerp(defD, fixD, cheekMask);
+    }else{
+        N = dot(normal, -lightDir);
+        N = smoothstep(gToonThreshold - gToonFeather, gToonThreshold + gToonFeather, N);
+    }
+    //疑似シャドウ調整部分
+    if(gUseshadowShading == true){
+        float shadowMask = 1.0f - gShadowShadingMask.Sample(gWrapSampler, In.UV).r;
+        float3 twistNormal;
+        if(gUseColorNormal == true){
+            twistNormal = mul(In.Color * 2.0f - 1.0f, gWIT);
+            twistNormal.x *= gShadowShadingTwistAxis.x;
+            twistNormal.y *= gShadowShadingTwistAxis.y;
+            twistNormal.z *= gShadowShadingTwistAxis.z;
+        }else{
+            twistNormal.x = normal.x * gShadowShadingTwistAxis.x;
+            twistNormal.y = normal.y * gShadowShadingTwistAxis.y;
+            twistNormal.z = normal.z * gShadowShadingTwistAxis.z;
+        }
+        float shadowDot = dot(twistNormal, -lightDir);
+        N = lerp(N, shadowDot, shadowMask * gShadowShadingBlend);
+    }
     //セルフシャドウの計算
     if(gUseCastShadow == true){
         float2 shadowMapUV = In.posInLVP.xy / In.posInLVP.w;
