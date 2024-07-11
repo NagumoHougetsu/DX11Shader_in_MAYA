@@ -92,7 +92,7 @@ uniform float gToonFeather <
 > = 0.0f;
 
 //アウトライン関連
-uniform bool gUseOutline <
+uniform bool gUseOutline <  
     string UIGroup = "Outline";
     int UIOrder = 200;
     string UIName = "Use Outline";
@@ -818,8 +818,8 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }else if(gHilightBlendMode == 1){
             hiColor = color + (hiColor * gHilightIntensity);
         }else if(gHilightBlendMode == 2){
-            hiColor = smoothstep(0.0f, 1.0f, clamp(1.0f - hiColor * gHilightIntensity, 0.0001f, 1.0f));
-            hiColor = color / hiColor;
+            hiColor *= gHilightIntensity;
+            hiColor = color / clamp(1.0f - hiColor, 0.0001f, 1.0f);
         }
         //ハイライトのライト方向処理分岐
         if(gUseLightDirHilightMask == true){
@@ -859,7 +859,6 @@ float4 PS(VS_TO_PS In) : SV_Target{
         }
         color = lerp(color, rimColor, vdn * gRimLevel);
     }
-
     //最終出力
     return float4(color, 1.0);
 }
