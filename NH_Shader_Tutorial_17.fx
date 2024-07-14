@@ -251,15 +251,29 @@ uniform float gRimFeather<
     float UIMax = 1.0f;
 > = 0.0f;
 
-uniform bool gLightDirMask <
+uniform bool gUseRimMask <
     string UIGroup = "Rimlight";
     int UIOrder = 308;
+    string UIName = "Use Rim Mask";
+> = false;
+
+uniform Texture2D gRimMask <
+    string UIGroup = "Rimlight";
+    int UIOrder = 309;
+    string UIName = "Rim Mask";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
+
+uniform bool gLightDirMask <
+    string UIGroup = "Rimlight";
+    int UIOrder = 310;
     string UIName = "Use LightDir Thin";
 > = false;
 
 uniform float gLightDirMaskDegree <
     string UIGroup = "Rimlight";
-    int UIOrder = 309;
+    int UIOrder = 311;
     string UIName = "Thin Degree";
     float UIMin = 0.0f;
     float UIMax = 1.0f;
@@ -339,12 +353,26 @@ uniform float gSigma <
 
 uniform int gSamplingPoints <
     string UIGroup = "CastShadow";
-    int UIOrder = 503;
+    int UIOrder = 506;
     string UIName = "Sampling Points";
     string UIFieldNames = "4:8";
     int UIMin = 0;
     int UIMax = 1;
 > = 1;
+
+uniform bool gUseShadowMask <
+    string UIGroup = "CastShadow";
+    int UIOrder = 507;
+    string UIName = "Use Shadow Mask";
+> = false;
+
+uniform Texture2D gShadowMask <
+    string UIGroup = "CastShadow";
+    int UIOrder = 508;
+    string UIName = "Shadow Mask";
+    string UIWidget = "FilePicker";
+    string ResourceType = "2D";
+>;
 
 //ハイライト関連
 uniform bool gUseHilight <
@@ -820,6 +848,10 @@ float4 PS(VS_TO_PS In) : SV_Target{
                 }
             }
         }
+        if(gUseShadowMask == true){
+            float shadowMask = gShadowMask.Sample(gWrapSampler, In.UV).r;
+            N = 1.0f - (1.0f - N) * shadowMask;
+        }
     }
     //基本色と影色の指定
     float3 baseColor;
@@ -882,19 +914,21 @@ float4 PS(VS_TO_PS In) : SV_Target{
     //リムカラーの計算
     float3 rimColor;
     if(gUseRim == true){
+        //リムライトカラーの指定部分
         if(gUseRimColorTexture == true){
             rimColor = pow(gRimColorTexture.Sample(gWrapSampler, In.UV).xyz, gamma);
         }else if(gUseRimColorTexture == false){
             rimColor = gRimColor;
+        }
+        //リムライト範囲調整計算部分
+        float mask = 1.0f;
+        if(gUseRimMask == true){
+            mask = gRimMask.Sample(gWrapSampler, In.UV).r;
         }
         float vdn = clamp(0.0f, 1.0f, dot(In.View, normal.xyz) + 1.0f);
         float rimArea = 1.0f - gRimArea;
         vdn = smoothstep(rimArea - gRimFeather, rimArea + gRimFeather, vdn);
-        if(gUseRimColorTexture == true){
-            rimColor = pow(gRimColorTexture.Sample(gWrapSampler, In.UV).xyz, gamma);
-        }else if(gUseRimColorTexture == false){
-            rimColor = gRimColor;
-        }
+        vdn *= mask;
         if(gRimBlendMode == 0){
             rimColor = 1.0f - (1.0f - color) * (1.0f - rimColor);
         }else if(gRimBlendMode == 1){
